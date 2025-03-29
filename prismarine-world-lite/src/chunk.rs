@@ -65,7 +65,7 @@ impl ChunkSection {
 #[derive(Debug, Clone)]
 pub struct ChunkColumn {
     // Sections are stored by their Y index relative to MIN_SECTION_Y (0 to SECTION_COUNT-1)
-    sections: Vec<Option<ChunkSection>>,
+    pub sections: Vec<Option<ChunkSection>>,
     // Optional: Store block entities if needed
     // block_entities: HashMap<WorldCoords, Value>,
 }
