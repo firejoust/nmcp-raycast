@@ -16,27 +16,14 @@ export interface BlockInfo {
 export type NapiWorld = World
 export declare class World {
   constructor()
-  /** Loads chunk column data from a network buffer (like `map_chunk` packet data). */
   loadColumn(chunkX: number, chunkZ: number, dataBuffer: Buffer): void
-  /** Unloads a chunk column. */
   unloadColumn(chunkX: number, chunkZ: number): void
-  /** Gets the state ID of the block at the given world coordinates. */
   getBlockStateId(x: number, y: number, z: number): number
-  /** Sets the state ID of the block at the given world coordinates. */
   setBlockStateId(x: number, y: number, z: number, stateId: number): void
-  /** Gets a simplified block object (stateId, light, skyLight, biomeId). */
   getBlock(x: number, y: number, z: number): BlockInfo | null
-  /** Gets the block light level at the given world coordinates. */
   getBlockLight(x: number, y: number, z: number): number
-  /** Gets the sky light level at the given world coordinates. */
   getSkyLight(x: number, y: number, z: number): number
-  /** Gets the biome ID at the given world coordinates. */
   getBiomeId(x: number, y: number, z: number): number
-  /**
-   * Exports the block state IDs for a single chunk section as a Buffer.
-   * Returns null if the chunk or section is not loaded.
-   */
   exportSectionStates(chunkX: number, chunkZ: number, sectionY: number): Buffer | null
-  /** Returns a list of coordinates for all currently loaded chunks. */
   getLoadedChunks(): { x: number; z: number; }[]
 }
