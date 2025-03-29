@@ -1,13 +1,11 @@
 #![deny(clippy::all)]
 
-// Removed #[macro_use] as it wasn't needed for napi_derive
-extern crate napi_derive;
+//! A lightweight NAPI-RS implementation for managing Minecraft world data (chunk columns).
+//! Provides basic block and biome access optimized for performance.
 
-mod chunk;
-mod coords;
-mod palette;
-mod parsing;
-mod world;
-
-// No functions needed at the top level for this example,
-// everything is exposed via the NapiWorld class.
+// Make modules public so `NapiWorld` can use items from them.
+pub mod chunk;
+pub mod coords;
+pub mod palette;
+pub mod parsing;
+pub mod world;
