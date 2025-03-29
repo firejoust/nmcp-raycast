@@ -8,6 +8,7 @@ mod coords;
 mod palette;
 mod parsing;
 mod world;
+mod raycast;
 
 // No functions needed at the top level for this example,
 // everything is exposed via the NapiWorld class.

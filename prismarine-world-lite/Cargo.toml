@@ -9,6 +9,8 @@ crate-type = ["cdylib"]
 [dependencies]
 byteorder = "1.5.0"
 dashmap = "6.1.0"
+glam = "0.30.1"
+minecraft-data-rs = "0.8.1"
 # Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
 napi = { version = "2.12.2", default-features = false, features = ["napi4"] }
 napi-derive = "2.12.2"

@@ -1,7 +1,6 @@
 // src/chunk.rs
 use crate::coords::{get_biome_index, get_section_block_index, BiomeCoords, SectionRelCoords, WorldCoords, SECTION_COUNT};
 use crate::palette::PaletteContainer;
-use std::collections::HashMap;
 // Add the Shr trait for the >> operator
 use std::ops::Shr;
 // Optional: For block entities
