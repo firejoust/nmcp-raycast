@@ -1,0 +1,3 @@
+# `prismarine-world-lite-linux-x64-gnu`
+
+This is the **x86_64-unknown-linux-gnu** binary for `prismarine-world-lite`

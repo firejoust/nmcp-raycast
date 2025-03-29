@@ -1,0 +1,15 @@
+{
+  "name": "world-test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "minecraft-protocol": "^1.55.0",
+    "vec3": "^0.1.10"
+  }
+}
