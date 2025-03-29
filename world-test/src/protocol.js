@@ -1,5 +1,5 @@
 const mc = require('minecraft-protocol');
-const { World } = require('../prismarine-world-lite/prismarine-world-lite.node'); // Assuming your built addon is index.js
+const { World } = require('../../prismarine-world-lite/prismarine-world-lite.node');
 const { Vec3 } = require('vec3'); // Import Vec3
 
 const HOST = process.argv[2] || 'localhost';
