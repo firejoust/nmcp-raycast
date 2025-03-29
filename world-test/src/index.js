@@ -1,4 +1,4 @@
-const { World } = require('../prismarine-world-lite/prismarine-world-lite.node'); // Assuming your built addon is index.js
+const { World } = require('../../prismarine-world-lite/prismarine-world-lite.node'); // Assuming your built addon is index.js
 const assert = require('assert');
 
 // Example usage simulating minecraft-protocol events
