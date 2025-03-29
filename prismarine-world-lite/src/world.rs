@@ -51,31 +51,29 @@ impl NapiWorld {
         chunk_x: i32,
         chunk_z: i32,
         data_buffer: Buffer,
-        // bit_map: Buffer, // TODO: Handle bitmap for partial updates if needed
     ) -> Result<()> {
         let coords = ChunkCoords { x: chunk_x, z: chunk_z };
         let mut cursor = Cursor::new(data_buffer.as_ref());
         let mut column = ChunkColumn::new();
+        eprintln!("[load_column] Loading chunk ({}, {}), Buffer length: {}", chunk_x, chunk_z, data_buffer.len());
 
-        // Parse sections according to 1.18+ format (data contains sections sequentially)
         for i in 0..SECTION_COUNT {
              let section_y = MIN_SECTION_Y + i as i32;
-             // Check if cursor has enough data before attempting to parse
-             if cursor.position() < cursor.get_ref().len() as u64 {
-                match parse_chunk_section(&mut cursor) {
+             let cursor_before = cursor.position();
+             // eprintln!("[load_column] Attempting to parse section y={}, cursor at: {}", section_y, cursor_before); // Optional
+
+             if cursor_before < cursor.get_ref().len() as u64 {
+                match parse_chunk_section(&mut cursor, section_y) { // Pass section_y
                     Ok(section) => {
+                        // eprintln!("[load_column] Parsed section y={}, bytes read: {}", section_y, cursor.position() - cursor_before); // Optional
                         column.insert_section(section_y, section);
                     }
                     Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                        // Reached end of buffer, likely fewer sections than max were sent
+                        eprintln!("[load_column] Reached EOF while parsing section y={}, stopping.", section_y);
                         break;
                     }
                     Err(e) => {
-                        // Log the error for debugging, but don't necessarily stop loading other sections
-                        eprintln!("Error parsing section y={} for chunk ({}, {}): {}", section_y, chunk_x, chunk_z, e);
-                        // Optionally break or continue based on desired strictness
-                        // break;
-                        // Or return Err(...) if any section failure is critical
+                         eprintln!("Error parsing section y={} for chunk ({}, {}): {}", section_y, chunk_x, chunk_z, e);
                          return Err(napi::Error::new(
                              napi::Status::GenericFailure,
                              format!("Failed to parse chunk section at y={}: {}", section_y, e),
@@ -83,17 +81,13 @@ impl NapiWorld {
                     }
                 }
              } else {
-                 break; // No more data in buffer
+                 eprintln!("[load_column] No more data in buffer for section y={}, stopping.", section_y);
+                 break;
              }
         }
+        eprintln!("[load_column] Finished parsing sections for ({}, {}), final cursor at: {}", chunk_x, chunk_z, cursor.position());
 
-        // TODO: Parse block entities if needed, they come after sections
-
-        // Store the loaded column using Arc<RwLock<>>
         self.columns.insert(coords, Arc::new(RwLock::new(column)));
-
-        // TODO: Emit chunkColumnLoad event via NAPI if needed (requires ThreadSafeFunction)
-
         Ok(())
     }
 
