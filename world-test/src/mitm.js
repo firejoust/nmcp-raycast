@@ -76,26 +76,28 @@ proxyServer.on("login", (serverClient) => {
   // --- World State Handling ---
   function handleWorldPacket(worldInstance, packetName, packetData) {
     switch (packetName) {
-      case "map_chunk":
-      case "level_chunk_with_light": {
+      case "map_chunk": {
+        console.log("map_chunk");
         const dataBuffer = Buffer.isBuffer(packetData.chunkData) ? packetData.chunkData : Buffer.from(packetData.chunkData);
         worldInstance.loadColumn(packetData.x, packetData.z, dataBuffer);
         break;
       }
-
       case "unload_chunk": {
+        console.log("unload_chunk");
         worldInstance.unloadColumn(packetData.chunkX, packetData.chunkZ);
         break;
       }
 
-      case "block_update": {
+      case "block_change": {
+        console.log("block_change");
         const pos = packetData.location;
-        const stateId = packetData.blockId;
+        const stateId = packetData.type;
         worldInstance.setBlockStateId(pos.x, pos.y, pos.z, stateId);
         break;
       }
 
       case "multi_block_change": {
+        console.log("multi_block_change");
         let chunkX, chunkZ, sectionY;
         if (packetData.chunkCoordinates) {
           // 1.20.2+ structure
