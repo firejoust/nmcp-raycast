@@ -1,76 +1,116 @@
-const { World } = require('../../prismarine-world-lite/prismarine-world-lite.node'); // Assuming your built addon is index.js
-const assert = require('assert');
+const Proxy = require('./proxy') // Assuming proxy.js is in the same directory
+const { Vec3 } = require('vec3') // Vec3 is needed here now
 
-// Example usage simulating minecraft-protocol events
+// --- Configuration ---
+const TARGET_SERVER_HOST = process.argv[2] || 'localhost'
+const TARGET_SERVER_PORT = parseInt(process.argv[3] || '25565', 10)
+const PROXY_PORT = parseInt(process.argv[4] || '25566', 10)
+const MC_VERSION = process.argv[5] || '1.21.1' // Use a version supported by prismarine-world-lite
 
-// 1. Create a world instance
-const world = new World();
-console.log('Created World instance');
-
-// 2. Simulate receiving chunk data (replace with actual buffer from minecraft-protocol)
-//    This is a placeholder buffer - you need real data from the game.
-const chunkX = 0;
-const chunkZ = 0;
-// Example: A very simple section (mostly air, single value palette for blocks and biomes)
-const simpleSectionBuffer = Buffer.from([
-    0x00, 0x01, // solid block count = 1
-    0x00,       // block bits per entry = 0 (single value palette)
-    0x01,       // block palette value = 1 (e.g., stone state ID)
-    0x00,       // block data length = 0
-    0x00,       // biome bits per entry = 0 (single value palette)
-    0x01,       // biome palette value = 1 (e.g., plains biome ID)
-    0x00        // biome data length = 0
-]);
-
-const numSections = 24; // For y = -64 to y = 319
-const chunkDataBuffers = Array(numSections).fill(simpleSectionBuffer);
-const fullChunkDataBuffer = Buffer.concat(chunkDataBuffers);
-
-try {
-    // Use camelCase: loadColumn instead of load_column
-    world.loadColumn(chunkX, chunkZ, fullChunkDataBuffer);
-    console.log(`Loaded chunk column at ${chunkX}, ${chunkZ}`);
-
-    // 3. Get a block
-    // Use camelCase: getBlock instead of get_block
-    const blockAir = world.getBlock(5, 65, 5); // Coords within the loaded chunk
-    console.log('Block at 5, 65, 5:', blockAir);
-    // state_id becomes stateId in JS object
-    assert(blockAir.stateId === 0 || blockAir.stateId === 1, 'Expected air or stone from simple buffer');
-
-    // 4. Set a block
-    const newStateId = 1; // Example: Stone state ID
-    // Use camelCase: setBlockStateId instead of set_block_state_id
-    world.setBlockStateId(5, 65, 5, newStateId);
-    console.log(`Set block at 5, 65, 5 to state ID ${newStateId}`);
-
-    // 5. Get the block again to verify
-    // Use camelCase: getBlock instead of get_block
-    const blockStone = world.getBlock(5, 65, 5);
-    console.log('Block at 5, 65, 5 after set:', blockStone);
-    // state_id becomes stateId
-    assert.strictEqual(blockStone?.stateId, newStateId, 'Block state ID should have been updated');
-
-    // 6. Get biome
-    // Use camelCase: getBiomeId instead of get_biome_id
-    const biomeId = world.getBiomeId(5, 65, 5);
-    console.log(`Biome ID at 5, 65, 5: ${biomeId}`);
-    // biome_id becomes biomeId
-    assert.strictEqual(biomeId, 1, 'Expected biome ID 1 from simple buffer');
-
-    // 7. Unload the chunk
-    // Use camelCase: unloadColumn instead of unload_column
-    world.unloadColumn(chunkX, chunkZ);
-    console.log(`Unloaded chunk column at ${chunkX}, ${chunkZ}`);
-
-    // 8. Verify unload
-    // Use camelCase: getBlock instead of get_block
-    const blockAfterUnload = world.getBlock(5, 65, 5);
-    console.log('Block at 5, 65, 5 after unload:', blockAfterUnload);
-    assert.strictEqual(blockAfterUnload, null, 'Chunk should be unloaded');
-
-    console.log('All tests passed!');
-
-} catch (e) {
-    console.error("Error during world operations:", e);
+if (!TARGET_SERVER_HOST) {
+  console.error('Usage: node example.js <target_host> [target_port] [proxy_port] [mc_version]')
+  process.exit(1)
 }
+
+// --- Create and Start Proxy ---
+const proxy = new Proxy({
+  targetHost: TARGET_SERVER_HOST,
+  targetPort: TARGET_SERVER_PORT,
+  proxyPort: PROXY_PORT,
+  version: MC_VERSION
+})
+
+// Store intervals for cleanup
+const clientIntervals = new Map()
+
+proxy.on('listening', () => {
+  console.log('Proxy is ready for connections.')
+})
+
+// The 'clientLogin' event now passes the clientState object
+proxy.on('clientLogin', (clientId, clientState) => {
+  console.log(`Client with ID ${clientId} has logged in through the proxy.`)
+
+  // Access world and position directly from the provided clientState
+  const { world, playerPosition } = clientState
+
+  // Example: Periodically check the block below the player
+  const intervalId = setInterval(() => {
+    // Check if the client is still connected before accessing state
+    if (clientState.ended) {
+      clearInterval(intervalId)
+      clientIntervals.delete(clientId) // Clean up map entry
+      return
+    }
+
+    const posBelow = playerPosition.floored().offset(0, -1, 0)
+
+    try {
+      // Use the world instance specific to this client
+      const blockStateId = world.getBlockStateId(posBelow.x, posBelow.y, posBelow.z)
+      console.log(`[Proxy ${clientId}] Block below player at ${posBelow}: State ID ${blockStateId}`)
+
+      // Example: Get the full block info
+      // const blockInfo = world.getBlock(posBelow.x, posBelow.y, posBelow.z);
+      // if (blockInfo) {
+      //   console.log(`[Proxy ${clientId}] Block info below:`, blockInfo);
+      // } else {
+      //   console.log(`[Proxy ${clientId}] No block info below (chunk likely unloaded).`);
+      // }
+    } catch (e) {
+      // console.warn(`[Proxy ${clientId}] Error getting block below player: ${e.message}`);
+    }
+  }, 5000) // Check every 5 seconds
+
+  // Store the interval ID so we can clear it on disconnect
+  clientIntervals.set(clientId, intervalId)
+})
+
+proxy.on('clientDisconnect', (clientId, reason) => {
+  console.log(`Client ${clientId} disconnected. Reason: ${reason}`)
+  // Clean up the interval associated with this client
+  const intervalId = clientIntervals.get(clientId)
+  if (intervalId) {
+    clearInterval(intervalId)
+    clientIntervals.delete(clientId)
+    console.log(`[Proxy ${clientId}] Stopped block checking interval.`)
+  }
+})
+
+proxy.on('clientError', (clientId, err) => {
+  console.error(`[Proxy] Error for client ${clientId}:`, err)
+})
+
+proxy.on('error', (err) => {
+  console.error('[Proxy] General server error:', err)
+})
+
+proxy.on('close', () => {
+  console.log('[Proxy] Server has been closed.')
+  // Clear any remaining intervals on full proxy shutdown
+  for (const intervalId of clientIntervals.values()) {
+    clearInterval(intervalId)
+  }
+  clientIntervals.clear()
+})
+
+// Start listening
+proxy.listen()
+
+// --- Graceful Shutdown ---
+function shutdown () {
+  console.log('Shutting down proxy...')
+  proxy.close() // This will disconnect clients and stop the server
+  // Allow some time for cleanup before exiting forcefully
+  setTimeout(() => process.exit(0), 1000)
+}
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received.')
+  shutdown()
+})
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received.')
+  shutdown()
+})
